@@ -16,7 +16,7 @@ pub const Scanner = struct {
         const raw = zbar.zbar_image_scanner_create() orelse return error.InitializationFailed;
         
         // Configure ZBar to enable all common decoders by default
-        _ = zbar.zbar_image_scanner_set_config(raw, zbar.zBAR_NONE, zbar.zBAR_CFG_ENABLE, 1);
+        _ = zbar.zbar_image_scanner_set_config(raw, zbar.ZBAR_NONE, zbar.ZBAR_CFG_ENABLE, 1);
         
         return .{ .raw = raw };
     }
