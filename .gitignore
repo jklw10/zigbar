@@ -1,0 +1,9 @@
+# Zig build outputs
+zig-out/
+zig-cache/
+.zig-cache/
+
+# Local IDEs
+.vscode/
+.idea/
+*.swp
