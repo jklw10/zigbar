@@ -77,7 +77,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    zigbar_module.addImport("c", translate_c.createModule());
+    zigbar_module.addImport("zbar", translate_c.createModule());
     zigbar_module.addIncludePath(b.path("deps/zbar/include"));
 
     // Link our freshly compiled ZBar static library directly into the module
