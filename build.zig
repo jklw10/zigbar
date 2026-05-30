@@ -72,12 +72,11 @@ pub fn build(b: *std.Build) void {
 
     // 3. Define your Zig module
     const zigbar_module = b.addModule("zigbar", .{
-        .root_source_file = b.path("src/root.zig"),
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    // Make the translated bindings available as @import("c") in root.zig
     zigbar_module.addImport("c", translate_c.createModule());
     zigbar_module.addIncludePath(b.path("deps/zbar/include"));
 
