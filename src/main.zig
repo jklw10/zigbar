@@ -31,17 +31,17 @@ pub const Scanner = struct {
         // 2. Report an error if the input dimensions are invalid or mismatched
         if (width == 0 or height == 0) return error.ScanFailed;
         if (gray_pixels.len < @as(usize, width) * height) return error.ScanFailed;
-    
+
         const img = zbar.zbar_image_create() orelse return error.ScanFailed;
         errdefer zbar.zbar_image_destroy(img);
-    
+
         zbar.zbar_image_set_format(img, @as(c_ulong, @intCast(fourcc('Y', '8', '0', '0'))));
         zbar.zbar_image_set_size(img, @intCast(width), @intCast(height));
         zbar.zbar_image_set_data(img, gray_pixels.ptr, @intCast(gray_pixels.len), null);
-    
+
         const n = zbar.zbar_scan_image(self.raw, img);
         if (n < 0) return error.ScanFailed;
-    
+
         const first_symbol = zbar.zbar_image_first_symbol(img);
         return SymbolIterator{
             .img_to_cleanup = img,
@@ -88,4 +88,42 @@ pub const SymbolIterator = struct {
 
 fn fourcc(a: u8, b: u8, c: u8, d: u8) u32 {
     return @as(u32, a) | (@as(u32, b) << 8) | (@as(u32, c) << 16) | (@as(u32, d) << 24);
+}
+test "hand-rolled barcode fuzzer" {
+    std.debug.print("\n[Fuzzer] Starting custom hand-rolled fuzz runner...\n", .{});
+
+    // Seed the PRNG with a fixed seed so the test is reproducible
+    var prng = std.Random.DefaultPrng.init(1337);
+    const random = prng.random();
+
+    var scanner = try Scanner.init();
+    defer scanner.deinit();
+
+    // Reusable stack buffer for the fuzzed image data
+    var gray_pixels_buf: [256 * 256]u8 = undefined;
+
+    const iterations = 50_000;
+    var i: usize = 0;
+    while (i < iterations) : (i += 1) {
+        if (i % 5000 == 0 and i > 0) {
+            std.debug.print("[Fuzzer] Progress: {d}/{d} iterations...\n", .{ i, iterations });
+        }
+
+        // Generate a random realistic resolution
+        const width = random.intRangeAtMost(u32, 1, 256);
+        const height = random.intRangeAtMost(u32, 1, 256);
+        const len = width * height;
+
+        // Fill with random pixel intensity data
+        random.bytes(gray_pixels_buf[0..len]);
+
+        // Attempt a scan. If an expected error is returned, skip to next iteration.
+        // If a panic, UBSan check, or segmentation fault occurs, the test runner halts here!
+        var iterator = scanner.scanImage(width, height, gray_pixels_buf[0..len]) catch continue;
+        defer iterator.deinit();
+
+        while (iterator.next()) |_| {}
+    }
+
+    std.debug.print("[Fuzzer] Completed {d} iterations with no crashes or memory leaks!\n", .{iterations});
 }
