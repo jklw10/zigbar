@@ -28,17 +28,20 @@ pub const Scanner = struct {
     /// Scans a raw grayscale (Y800) image frame.
     /// Returns a `SymbolIterator` containing the scanned results.
     pub fn scanImage(self: *Scanner, width: u32, height: u32, gray_pixels: []const u8) Error!SymbolIterator {
+        // 2. Report an error if the input dimensions are invalid or mismatched
+        if (width == 0 or height == 0) return error.ScanFailed;
+        if (gray_pixels.len < @as(usize, width) * height) return error.ScanFailed;
+    
         const img = zbar.zbar_image_create() orelse return error.ScanFailed;
         errdefer zbar.zbar_image_destroy(img);
-
-        // Convert format tag 'Y800' (grayscale) to integer representation
+    
         zbar.zbar_image_set_format(img, @as(c_ulong, @intCast(fourcc('Y', '8', '0', '0'))));
         zbar.zbar_image_set_size(img, @intCast(width), @intCast(height));
         zbar.zbar_image_set_data(img, gray_pixels.ptr, @intCast(gray_pixels.len), null);
-
+    
         const n = zbar.zbar_scan_image(self.raw, img);
         if (n < 0) return error.ScanFailed;
-
+    
         const first_symbol = zbar.zbar_image_first_symbol(img);
         return SymbolIterator{
             .img_to_cleanup = img,
